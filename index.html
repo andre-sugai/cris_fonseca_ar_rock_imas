@@ -169,15 +169,11 @@
       <a-assets>
         <!-- A imagem do dia é injetada via JavaScript -->
         <img id="fotosfera-img" src="" />
-        <audio id="audio1" src="./1.m4a" preload="auto"></audio>
-        <audio id="audio2" src="./2.m4a" preload="auto"></audio>
-        <audio id="audio3" src="./3.m4a" preload="auto"></audio>
-        <audio id="audio4" src="./4.m4a" preload="auto"></audio>
-        <audio id="audio5" src="./5.m4a" preload="auto"></audio>
-        <audio id="audio6" src="./6.m4a" preload="auto"></audio>
-        <audio id="audio7" src="./7.m4a" preload="auto"></audio>
-        <audio id="audio8" src="./8.m4a" preload="auto"></audio>
-        <audio id="audio9" src="./9.m4a" preload="auto"></audio>
+        <audio id="audio1" src="./Dio - Rainbow In The Dark.mp3" preload="auto"></audio>
+        <audio id="audio2" src="./Gaviões da Fiel e Grêmio Gaviões da Fiel Torcida - Hino do Corinthians.mp3" preload="auto"></audio>
+        <audio id="audio3" src="./Led Zeppelin - Rock and Roll (Remaster).mp3" preload="auto"></audio>
+        <audio id="audio4" src="./The Cult- Fire Woman.mp3" preload="auto"></audio>
+        <audio id="audio5" src="./Titãs - Flores.mp3" preload="auto"></audio>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -205,10 +201,10 @@
       </a-entity>
     </a-scene>
 
-    <!-- Script: imagem diária aleatória da pasta fotos/ -->
+    <!-- Script: Controle de Mídias (Fotos e Áudios) -->
     <script>
-      (function () {
-        // Lista de todas as imagens disponíveis na pasta fotos/
+      document.addEventListener('DOMContentLoaded', function () {
+        // 1. Lista de todas as imagens disponíveis na pasta fotos/
         var fotos = [
           './fotos/1.webp',  './fotos/2.webp',  './fotos/3.webp',  './fotos/4.webp',
           './fotos/5.webp',  './fotos/6.webp',  './fotos/7.webp',  './fotos/8.webp',
@@ -220,53 +216,46 @@
           './fotos/29.webp', './fotos/30.webp'
         ];
 
-        // Gera um índice determinístico baseado na data de hoje (YYYY-MM-DD)
-        // → mesma foto o dia inteiro; foto diferente a cada novo dia
-        function getDailyIndex(total) {
-          var now = new Date();
-          // Chave única por dia: ex. "2026-04-11"
-          var dateKey = now.getFullYear() + '-'
-            + String(now.getMonth() + 1).padStart(2, '0') + '-'
-            + String(now.getDate()).padStart(2, '0');
+        // --- Playlist de Fotos embaralhada ---
+        // Garante que todas as 30 fotos apareçam antes de repetir qualquer uma
+        var photoPlaylist = [];
+        var photoIndex = 0;
 
-          // Hash simples da string para número (djb2)
-          var hash = 5381;
-          for (var i = 0; i < dateKey.length; i++) {
-            hash = ((hash << 5) + hash) + dateKey.charCodeAt(i);
-            hash = hash & hash; // converte para 32 bits
+        function buildShuffledPhotos() {
+          photoPlaylist = Array.from({ length: fotos.length }, function (_, i) { return i; });
+          for (var i = photoPlaylist.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = photoPlaylist[i]; photoPlaylist[i] = photoPlaylist[j]; photoPlaylist[j] = tmp;
           }
-          return Math.abs(hash) % total;
+          photoIndex = 0;
+          console.log('[AR Cris Fonseca] Nova playlist de fotos:', photoPlaylist);
         }
 
-        var index = getDailyIndex(fotos.length);
-        var fotoDoDia = fotos[index];
+        function getNextPhoto() {
+          if (photoIndex >= photoPlaylist.length) {
+            buildShuffledPhotos();
+          }
+          return fotos[photoPlaylist[photoIndex++]];
+        }
 
-        // Injeta o src na tag <img id="fotosfera-img"> antes do A-Frame carregar
+        buildShuffledPhotos();
+
+        // Injeta a primeira foto imediatamente para carregamento inicial
         var imgEl = document.getElementById('fotosfera-img');
+        var planeEl = document.querySelector('a-plane');
+        var initialPhoto = getNextPhoto();
         if (imgEl) {
-          imgEl.setAttribute('src', fotoDoDia);
+          imgEl.setAttribute('src', initialPhoto);
+        }
+        if (planeEl) {
+          planeEl.setAttribute('src', initialPhoto);
         }
 
-        console.log('[AR Ramones] Foto do dia (' + new Date().toLocaleDateString('pt-BR') + '):', fotoDoDia);
-      })();
-    </script>
-
-    <!-- Script: sistema de áudio aleatório com playlist embaralhada -->
-    <script>
-      /**
-       * Sistema de áudio randômico
-       * Toca um dos 3 arquivos MP3 aleatoriamente quando a imagem é detectada
-       */
-      document.addEventListener('DOMContentLoaded', function () {
-        const sceneEl = document.querySelector('a-scene');
-        let currentAudio = null;
-        let isPlaying = false;
-
-        // --- Playlist embaralhada (Fisher-Yates) ---
-        // Garante que todas as 9 músicas toquem antes de repetir qualquer uma
-        const totalAudios = 9;
-        let playlist = [];
-        let playlistIndex = 0;
+        // --- Playlist de Áudios embaralhada ---
+        // Garante que todas as 5 músicas toquem antes de repetir qualquer uma
+        var totalAudios = 5;
+        var playlist = [];
+        var playlistIndex = 0;
 
         function buildShuffledPlaylist() {
           playlist = Array.from({ length: totalAudios }, function (_, i) { return i + 1; });
@@ -275,25 +264,40 @@
             var tmp = playlist[i]; playlist[i] = playlist[j]; playlist[j] = tmp;
           }
           playlistIndex = 0;
-          console.log('[AR Ramones] Nova playlist:', playlist);
+          console.log('[AR Cris Fonseca] Nova playlist de áudio:', playlist);
         }
 
         function nextTrackIndex() {
           if (playlistIndex >= playlist.length) {
-            buildShuffledPlaylist(); // Regenera quando acabar todas
+            buildShuffledPlaylist();
           }
           return playlist[playlistIndex++];
         }
 
-        buildShuffledPlaylist(); // Inicializa na carga da página
-        // ------------------------------------------
+        buildShuffledPlaylist();
+
+        // --- Sistema de Reprodução e Eventos ---
+        var sceneEl = document.querySelector('a-scene');
+        var currentAudio = null;
+        var isPlaying = false;
 
         sceneEl.addEventListener('loaded', function () {
-          const target = document.querySelector('[mindar-image-target]');
+          var target = document.querySelector('[mindar-image-target]');
 
-          // Toda vez que a imagem é detectada, toca a próxima música da playlist
+          // Toda vez que a imagem é detectada
           target.addEventListener('targetFound', function () {
             if (!isPlaying) {
+              // 1. Muda a foto do plano para a próxima foto da playlist
+              var novaFoto = getNextPhoto();
+              console.log('[AR Cris Fonseca] Mudando foto para:', novaFoto);
+              if (imgEl) {
+                imgEl.setAttribute('src', novaFoto);
+              }
+              if (planeEl) {
+                planeEl.setAttribute('src', novaFoto);
+              }
+
+              // 2. Toca a próxima música
               playNextAudio();
               isPlaying = true;
             }
@@ -310,16 +314,14 @@
         });
 
         function playNextAudio() {
-          // Para qualquer áudio em reprodução
           if (currentAudio) {
             currentAudio.pause();
             currentAudio.currentTime = 0;
           }
 
-          // Pega a próxima faixa da playlist embaralhada
           var trackId = nextTrackIndex();
           currentAudio = document.getElementById('audio' + trackId);
-          console.log('[AR Ramones] Tocando faixa:', trackId + '.m4a');
+          console.log('[AR Cris Fonseca] Tocando faixa:', trackId + '.m4a');
 
           if (currentAudio) {
             currentAudio.play().catch(function (error) {
