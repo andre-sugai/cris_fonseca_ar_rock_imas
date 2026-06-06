@@ -155,7 +155,7 @@
     <!-- Cena MindAR com configurações de estabilidade -->
     <a-scene
       mindar-image="
-        imageTargetSrc: ./targets2.mind;
+        imageTargetSrc: ./targets.mind;
         maxTrack: 2;
         smoothCount: 5;
         smoothTolerance: 0.01;
@@ -294,6 +294,7 @@
         var sceneEl = document.querySelector('a-scene');
         var currentAudio = null;
         var isPlaying = false;
+        var activeTarget = null; // Rastreia qual imagem está sendo escaneada no momento
 
         sceneEl.addEventListener('loaded', function () {
           var targets = document.querySelectorAll('[mindar-image-target]');
@@ -301,6 +302,7 @@
           targets.forEach(function (target) {
             // Toda vez que qualquer um dos alvos for detectado
             target.addEventListener('targetFound', function () {
+              activeTarget = target;
               if (!isPlaying) {
                 // 1. Muda a foto de todos os planos para a próxima foto da playlist
                 var novaFoto = getNextPhoto();
@@ -320,13 +322,17 @@
               }
             });
 
-            // Quando a imagem é perdida, para o áudio e libera para o próximo scan
+            // Quando a imagem é perdida
             target.addEventListener('targetLost', function () {
-              if (currentAudio) {
-                currentAudio.pause();
-                currentAudio.currentTime = 0;
+              // Apenas reseta a reprodução se o alvo que foi perdido for o alvo atualmente ativo
+              if (activeTarget === target) {
+                if (currentAudio) {
+                  currentAudio.pause();
+                  currentAudio.currentTime = 0;
+                }
+                isPlaying = false;
+                activeTarget = null;
               }
-              isPlaying = false;
             });
           });
         });
