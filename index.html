@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Experiência AR Ramones</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      .logo-container {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+      }
+      .logo-container img {
+        height: 40px;
+        width: auto;
+        display: block;
+        opacity: 0.8;
+      }
+      .scanner-hint {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        background: rgba(0, 0, 0, 0.55);
+        color: #ffffff;
+        font-family: 'Arial', sans-serif;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        padding: 10px 22px;
+        border-radius: 30px;
+        white-space: nowrap;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        pointer-events: none;
+        text-align: center;
+      }
+      /* Remove o botão VR padrão do A-Frame */
+      .a-enter-vr,
+      .a-enter-vr-button {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Instrução no topo do scanner -->
+    <div class="scanner-hint">Aponte o Scanner para o quadro da banda</div>
+
+    <!-- Logo no canto inferior direito -->
+    <a
+      href="https://bio.link/orbee360"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="logo-container"
+    >
+      <img src="./orbee360.png" alt="Logo Orbee 360" />
+    </a>
+
+    <!-- Script de estabilização personalizado -->
+    <script>
+      /**
+       * Componente de estabilização para reduzir tremor em objetos AR
+       * @description Aplica suavização de movimento aos objetos para reduzir tremores
+       * @param {number} smoothingFactor - Fator de suavização (0.1 = mais suave, 0.9 = mais responsivo)
+       * @param {boolean} stabilizePosition - Se deve estabilizar a posição
+       * @param {boolean} stabilizeRotation - Se deve estabilizar a rotação
+       */
+      AFRAME.registerComponent('stabilizer', {
+        schema: {
+          smoothingFactor: { type: 'number', default: 0.15 },
+          stabilizePosition: { type: 'boolean', default: true },
+          stabilizeRotation: { type: 'boolean', default: false },
+        },
+
+        init: function () {
+          // Inicializa as posições e rotações anteriores
+          this.lastPosition = new THREE.Vector3();
+          this.lastRotation = new THREE.Euler();
+
+          // Obtém a posição e rotação iniciais
+          const obj3D = this.el.object3D;
+          this.lastPosition.copy(obj3D.position);
+          this.lastRotation.copy(obj3D.rotation);
+
+          // Flag para controlar se já foi inicializado
+          this.initialized = false;
+        },
+
+        tick: function () {
+          const obj3D = this.el.object3D;
+          const smoothingFactor = this.data.smoothingFactor;
+
+          // Estabilização de posição
+          if (this.data.stabilizePosition) {
+            const currentPosition = obj3D.position.clone();
+            const smoothedPosition = new THREE.Vector3();
+
+            // Aplica interpolação linear para suavizar o movimento
+            smoothedPosition.lerpVectors(
+              this.lastPosition,
+              currentPosition,
+              smoothingFactor
+            );
+
+            // Atualiza a posição do objeto
+            obj3D.position.copy(smoothedPosition);
+            this.lastPosition.copy(smoothedPosition);
+          }
+
+          // Estabilização de rotação (opcional)
+          if (this.data.stabilizeRotation) {
+            const currentRotation = obj3D.rotation.clone();
+            const smoothedRotation = new THREE.Euler();
+
+            // Suaviza a rotação
+            smoothedRotation.x = THREE.MathUtils.lerp(
+              this.lastRotation.x,
+              currentRotation.x,
+              smoothingFactor
+            );
+            smoothedRotation.y = THREE.MathUtils.lerp(
+              this.lastRotation.y,
+              currentRotation.y,
+              smoothingFactor
+            );
+            smoothedRotation.z = THREE.MathUtils.lerp(
+              this.lastRotation.z,
+              currentRotation.z,
+              smoothingFactor
+            );
+
+            obj3D.rotation.copy(smoothedRotation);
+            this.lastRotation.copy(smoothedRotation);
+          }
+        },
+      });
+    </script>
+
+    <!-- Cena MindAR com configurações de estabilidade -->
+    <a-scene
+      mindar-image="
+        imageTargetSrc: ./targets.mind;
+        smoothCount: 5;
+        smoothTolerance: 0.01;
+        smoothThreshold: 5;
+        missTolerance: 5;
+        warmupTolerance: 5;
+      "
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <!-- 1. "DESPENSA": Carregamos a sua foto 360° e os áudios -->
+      <a-assets>
+        <!-- A imagem do dia é injetada via JavaScript -->
+        <img id="fotosfera-img" src="" />
+        <audio id="audio1" src="./1.m4a" preload="auto"></audio>
+        <audio id="audio2" src="./2.m4a" preload="auto"></audio>
+        <audio id="audio3" src="./3.m4a" preload="auto"></audio>
+        <audio id="audio4" src="./4.m4a" preload="auto"></audio>
+        <audio id="audio5" src="./5.m4a" preload="auto"></audio>
+        <audio id="audio6" src="./6.m4a" preload="auto"></audio>
+        <audio id="audio7" src="./7.m4a" preload="auto"></audio>
+        <audio id="audio8" src="./8.m4a" preload="auto"></audio>
+        <audio id="audio9" src="./9.m4a" preload="auto"></audio>
+      </a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <!-- 2. "PALCO": O conteúdo que aparece sobre o cartão -->
+      <a-entity mindar-image-target="targetIndex: 0">
+        <!-- 
+          3. O POSTER PLANO:
+          Este é um plano 2D que exibe a imagem como um poster.
+          - src="#fotosfera-img": Aplica sua imagem no plano.
+          - width="1.6" height="1.2": Dimensões do poster (proporção 4:3, ajuste conforme sua imagem).
+          - position="0 0 0": Centralizado sobre o alvo detectado.
+          - rotation="0 0 0": Orientação padrão (voltado para a câmera).
+        -->
+        <a-plane
+          src="#fotosfera-img"
+          width="2.7"
+          height="4.8"
+          position="0 0 0"
+          rotation="0 0 0"
+          stabilizer
+        ></a-plane>
+
+
+      </a-entity>
+    </a-scene>
+
+    <!-- Script: imagem diária aleatória da pasta fotos/ -->
+    <script>
+      (function () {
+        // Lista de todas as imagens disponíveis na pasta fotos/
+        var fotos = [
+          './fotos/1.webp',  './fotos/2.webp',  './fotos/3.webp',  './fotos/4.webp',
+          './fotos/5.webp',  './fotos/6.webp',  './fotos/7.webp',  './fotos/8.webp',
+          './fotos/9.webp',  './fotos/10.webp', './fotos/11.webp', './fotos/12.webp',
+          './fotos/13.webp', './fotos/14.webp', './fotos/15.webp', './fotos/16.webp',
+          './fotos/17.webp', './fotos/18.webp', './fotos/19.webp', './fotos/20.webp',
+          './fotos/21.webp', './fotos/22.webp', './fotos/23.webp', './fotos/24.webp',
+          './fotos/25.webp', './fotos/26.webp', './fotos/27.webp', './fotos/28.webp'
+        ];
+
+        // Gera um índice determinístico baseado na data de hoje (YYYY-MM-DD)
+        // → mesma foto o dia inteiro; foto diferente a cada novo dia
+        function getDailyIndex(total) {
+          var now = new Date();
+          // Chave única por dia: ex. "2026-04-11"
+          var dateKey = now.getFullYear() + '-'
+            + String(now.getMonth() + 1).padStart(2, '0') + '-'
+            + String(now.getDate()).padStart(2, '0');
+
+          // Hash simples da string para número (djb2)
+          var hash = 5381;
+          for (var i = 0; i < dateKey.length; i++) {
+            hash = ((hash << 5) + hash) + dateKey.charCodeAt(i);
+            hash = hash & hash; // converte para 32 bits
+          }
+          return Math.abs(hash) % total;
+        }
+
+        var index = getDailyIndex(fotos.length);
+        var fotoDoDia = fotos[index];
+
+        // Injeta o src na tag <img id="fotosfera-img"> antes do A-Frame carregar
+        var imgEl = document.getElementById('fotosfera-img');
+        if (imgEl) {
+          imgEl.setAttribute('src', fotoDoDia);
+        }
+
+        console.log('[AR Ramones] Foto do dia (' + new Date().toLocaleDateString('pt-BR') + '):', fotoDoDia);
+      })();
+    </script>
+
+    <!-- Script: sistema de áudio aleatório com playlist embaralhada -->
+    <script>
+      /**
+       * Sistema de áudio randômico
+       * Toca um dos 3 arquivos MP3 aleatoriamente quando a imagem é detectada
+       */
+      document.addEventListener('DOMContentLoaded', function () {
+        const sceneEl = document.querySelector('a-scene');
+        let currentAudio = null;
+        let isPlaying = false;
+
+        // --- Playlist embaralhada (Fisher-Yates) ---
+        // Garante que todas as 9 músicas toquem antes de repetir qualquer uma
+        const totalAudios = 9;
+        let playlist = [];
+        let playlistIndex = 0;
+
+        function buildShuffledPlaylist() {
+          playlist = Array.from({ length: totalAudios }, function (_, i) { return i + 1; });
+          for (var i = playlist.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = playlist[i]; playlist[i] = playlist[j]; playlist[j] = tmp;
+          }
+          playlistIndex = 0;
+          console.log('[AR Ramones] Nova playlist:', playlist);
+        }
+
+        function nextTrackIndex() {
+          if (playlistIndex >= playlist.length) {
+            buildShuffledPlaylist(); // Regenera quando acabar todas
+          }
+          return playlist[playlistIndex++];
+        }
+
+        buildShuffledPlaylist(); // Inicializa na carga da página
+        // ------------------------------------------
+
+        sceneEl.addEventListener('loaded', function () {
+          const target = document.querySelector('[mindar-image-target]');
+
+          // Toda vez que a imagem é detectada, toca a próxima música da playlist
+          target.addEventListener('targetFound', function () {
+            if (!isPlaying) {
+              playNextAudio();
+              isPlaying = true;
+            }
+          });
+
+          // Quando a imagem é perdida, para o áudio e libera para o próximo scan
+          target.addEventListener('targetLost', function () {
+            if (currentAudio) {
+              currentAudio.pause();
+              currentAudio.currentTime = 0;
+            }
+            isPlaying = false;
+          });
+        });
+
+        function playNextAudio() {
+          // Para qualquer áudio em reprodução
+          if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+          }
+
+          // Pega a próxima faixa da playlist embaralhada
+          var trackId = nextTrackIndex();
+          currentAudio = document.getElementById('audio' + trackId);
+          console.log('[AR Ramones] Tocando faixa:', trackId + '.m4a');
+
+          if (currentAudio) {
+            currentAudio.play().catch(function (error) {
+              console.log('Erro ao reproduzir áudio:', error);
+            });
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
