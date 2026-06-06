@@ -155,7 +155,8 @@
     <!-- Cena MindAR com configurações de estabilidade -->
     <a-scene
       mindar-image="
-        imageTargetSrc: ./targets.mind;
+        imageTargetSrc: ./targets2.mind;
+        maxTrack: 2;
         smoothCount: 5;
         smoothTolerance: 0.01;
         smoothThreshold: 5;
@@ -179,6 +180,7 @@
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <!-- 2. "PALCO": O conteúdo que aparece sobre o cartão -->
+      <!-- Target 0 -->
       <a-entity mindar-image-target="targetIndex: 0">
         <!-- 
           3. O POSTER PLANO:
@@ -196,8 +198,18 @@
           rotation="0 0 0"
           stabilizer
         ></a-plane>
+      </a-entity>
 
-
+      <!-- Target 1 -->
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-plane
+          src="#fotosfera-img"
+          width="2.7"
+          height="4.8"
+          position="0 0 0"
+          rotation="0 0 0"
+          stabilizer
+        ></a-plane>
       </a-entity>
     </a-scene>
 
@@ -242,13 +254,15 @@
 
         // Injeta a primeira foto imediatamente para carregamento inicial
         var imgEl = document.getElementById('fotosfera-img');
-        var planeEl = document.querySelector('a-plane');
+        var planeEls = document.querySelectorAll('a-plane');
         var initialPhoto = getNextPhoto();
         if (imgEl) {
           imgEl.setAttribute('src', initialPhoto);
         }
-        if (planeEl) {
-          planeEl.setAttribute('src', initialPhoto);
+        if (planeEls) {
+          planeEls.forEach(function (plane) {
+            plane.setAttribute('src', initialPhoto);
+          });
         }
 
         // --- Playlist de Áudios embaralhada ---
@@ -282,34 +296,38 @@
         var isPlaying = false;
 
         sceneEl.addEventListener('loaded', function () {
-          var target = document.querySelector('[mindar-image-target]');
+          var targets = document.querySelectorAll('[mindar-image-target]');
 
-          // Toda vez que a imagem é detectada
-          target.addEventListener('targetFound', function () {
-            if (!isPlaying) {
-              // 1. Muda a foto do plano para a próxima foto da playlist
-              var novaFoto = getNextPhoto();
-              console.log('[AR Cris Fonseca] Mudando foto para:', novaFoto);
-              if (imgEl) {
-                imgEl.setAttribute('src', novaFoto);
+          targets.forEach(function (target) {
+            // Toda vez que qualquer um dos alvos for detectado
+            target.addEventListener('targetFound', function () {
+              if (!isPlaying) {
+                // 1. Muda a foto de todos os planos para a próxima foto da playlist
+                var novaFoto = getNextPhoto();
+                console.log('[AR Cris Fonseca] Mudando foto para:', novaFoto);
+                if (imgEl) {
+                  imgEl.setAttribute('src', novaFoto);
+                }
+                if (planeEls) {
+                  planeEls.forEach(function (plane) {
+                    plane.setAttribute('src', novaFoto);
+                  });
+                }
+
+                // 2. Toca a próxima música
+                playNextAudio();
+                isPlaying = true;
               }
-              if (planeEl) {
-                planeEl.setAttribute('src', novaFoto);
+            });
+
+            // Quando a imagem é perdida, para o áudio e libera para o próximo scan
+            target.addEventListener('targetLost', function () {
+              if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
               }
-
-              // 2. Toca a próxima música
-              playNextAudio();
-              isPlaying = true;
-            }
-          });
-
-          // Quando a imagem é perdida, para o áudio e libera para o próximo scan
-          target.addEventListener('targetLost', function () {
-            if (currentAudio) {
-              currentAudio.pause();
-              currentAudio.currentTime = 0;
-            }
-            isPlaying = false;
+              isPlaying = false;
+            });
           });
         });
 
