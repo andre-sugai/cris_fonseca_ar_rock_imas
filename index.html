@@ -166,15 +166,10 @@
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
-      <!-- 1. "DESPENSA": Carregamos a sua foto 360° e os áudios -->
+      <!-- 1. "DESPENSA": Carregamos a sua foto 360° -->
       <a-assets>
         <!-- A imagem do dia é injetada via JavaScript -->
         <img id="fotosfera-img" src="" />
-        <audio id="audio1" src="./Dio - Rainbow In The Dark.mp3" preload="auto"></audio>
-        <audio id="audio2" src="./Gaviões da Fiel e Grêmio Gaviões da Fiel Torcida - Hino do Corinthians.mp3" preload="auto"></audio>
-        <audio id="audio3" src="./Led Zeppelin - Rock and Roll (Remaster).mp3" preload="auto"></audio>
-        <audio id="audio4" src="./The Cult- Fire Woman.mp3" preload="auto"></audio>
-        <audio id="audio5" src="./Titãs - Flores.mp3" preload="auto"></audio>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -212,6 +207,9 @@
         ></a-plane>
       </a-entity>
     </a-scene>
+
+    <!-- Elemento de áudio único oculto (carregado dinamicamente para economizar banda e CPU) -->
+    <audio id="ar-audio" preload="none"></audio>
 
     <!-- Script: Controle de Mídias (Fotos e Áudios) -->
     <script>
@@ -292,9 +290,28 @@
 
         // --- Sistema de Reprodução e Eventos ---
         var sceneEl = document.querySelector('a-scene');
-        var currentAudio = null;
+        var audioEl = document.getElementById('ar-audio');
         var isPlaying = false;
         var activeTarget = null; // Rastreia qual imagem está sendo escaneada no momento
+
+        // Mapeamento dos caminhos das músicas
+        var audioTracks = {
+          1: './Dio - Rainbow In The Dark.mp3',
+          2: './Gaviões da Fiel e Grêmio Gaviões da Fiel Torcida - Hino do Corinthians.mp3',
+          3: './Led Zeppelin - Rock and Roll (Remaster).mp3',
+          4: './The Cult- Fire Woman.mp3',
+          5: './Titãs - Flores.mp3'
+        };
+
+        // Desbloqueia o áudio em dispositivos móveis (ex: iOS Safari) no primeiro toque na tela
+        document.body.addEventListener('click', function() {
+          audioEl.play().then(function() {
+            audioEl.pause();
+            console.log('[AR Cris Fonseca] Áudio desbloqueado para iOS');
+          }).catch(function(e) {
+            console.log('[AR Cris Fonseca] Verificação de desbloqueio de áudio:', e);
+          });
+        }, { once: true });
 
         sceneEl.addEventListener('loaded', function () {
           var targets = document.querySelectorAll('[mindar-image-target]');
@@ -326,10 +343,8 @@
             target.addEventListener('targetLost', function () {
               // Apenas reseta a reprodução se o alvo que foi perdido for o alvo atualmente ativo
               if (activeTarget === target) {
-                if (currentAudio) {
-                  currentAudio.pause();
-                  currentAudio.currentTime = 0;
-                }
+                audioEl.pause();
+                audioEl.src = ''; // Libera recursos de rede/memória do áudio do elemento
                 isPlaying = false;
                 activeTarget = null;
               }
@@ -338,17 +353,18 @@
         });
 
         function playNextAudio() {
-          if (currentAudio) {
-            currentAudio.pause();
-            currentAudio.currentTime = 0;
-          }
+          audioEl.pause();
 
           var trackId = nextTrackIndex();
-          currentAudio = document.getElementById('audio' + trackId);
-          console.log('[AR Cris Fonseca] Tocando faixa:', trackId + '.m4a');
+          var audioSrc = audioTracks[trackId];
+          console.log('[AR Cris Fonseca] Tocando faixa:', trackId + ' - ' + audioSrc);
 
-          if (currentAudio) {
-            currentAudio.play().catch(function (error) {
+          audioEl.src = audioSrc;
+          audioEl.load();
+
+          var playPromise = audioEl.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(function (error) {
               console.log('Erro ao reproduzir áudio:', error);
             });
           }
